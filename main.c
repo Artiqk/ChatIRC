@@ -2,20 +2,18 @@
 
 int main () {
     SOCKET sock;
-    struct sockaddr_in server;
     pthread_t dataRecv;
     pthread_t sendData;
-    int connected = 1;
+    connected = 1;
 
-    initConnectionToServer(&sock, server);
+    initConnectionToServer(&sock);
 
-    while (connected) {
-        pthread_create(&dataRecv, NULL, getRemoteServerData, (void*)&sock);
+    pthread_create(&dataRecv, NULL, getRemoteServerData, (void*)&sock);
+    pthread_create(&sendData, NULL, sendUserInputToServer, (void*)&sock);
 
-        connected = sendUserInputToServer(sock, server, MESSAGE_LENGTH);
-
-        pthread_join(dataRecv, NULL);
-    }
+    pthread_join(dataRecv, NULL);
+    pthread_join(sendData, (void *)&connected);
+    
 
     close(sock);
 

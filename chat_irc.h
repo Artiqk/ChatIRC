@@ -16,23 +16,20 @@ typedef int SOCKET;
 #define MESSAGE_LENGTH 256
 
 
-typedef struct sendto_parameters {
-    SOCKET sock;
-    struct sockaddr_in server;
-    int messageLength;
-};
+struct sockaddr_in server;
+int connected;
 
 
-void initConnectionToServer (SOCKET *sock, struct sockaddr_in server);
+void initConnectionToServer (SOCKET *sock);
 
-int sendUserInputToServer (SOCKET sock, struct sockaddr_in server, int maxDataLength);
+void* sendUserInputToServer (void *sock);
 
 void* getRemoteServerData (void *sock);
 
 void handleError(char *message);
 
 
-void initConnectionToServer (SOCKET *sock, struct sockaddr_in server) {
+void initConnectionToServer (SOCKET *sock) {
     *sock = socket(AF_INET, SOCK_STREAM, 0);
     if (socket < 0) handleError("Error creating socket");
 
@@ -45,35 +42,41 @@ void initConnectionToServer (SOCKET *sock, struct sockaddr_in server) {
 }
 
 
-void* sendUserInputToServer (SOCKET sock, struct sockaddr_in server, int maxDataLength) {
-    char data[maxDataLength];
+void* sendUserInputToServer (void* sock) {
+    while (connected) {
+        SOCKET sockt = *((SOCKET *)sock);
 
-    printf("> "); fgets(data, maxDataLength, stdin);
+        char data[MESSAGE_LENGTH];
 
-    data[strcspn(data, "\n")] = '\0';
+        printf("> "); fgets(data, MESSAGE_LENGTH, stdin);
 
-    if (strcmp(data, "disconnect") == 0) {
-        return 0;
+        data[strcspn(data, "\n")] = '\0';
+
+        if (strcmp(data, "disconnect") == 0) {
+            return (void *)0;
+        }
+
+        int dataLength = strlen(data) + 1;
+
+        sendto(sockt, data, dataLength, 0, (struct sockaddr*)&server, sizeof(server));
     }
 
-    int dataLength = strlen(data) + 1;
-
-    sendto(sock, data, dataLength, 0, (struct sockaddr*)&server, sizeof(server));
-
-    return 1;
+    return (void *)1;
 }
 
 
-void* getRemoteServerData (void *sock) {
-    SOCKET sockt = *((SOCKET *) sock);
+void* getRemoteServerData (void* sock) {
+    while (connected) {
+        SOCKET sockt = *((SOCKET *) sock);
 
-    char incomingData[MESSAGE_LENGTH];
+        char incomingData[MESSAGE_LENGTH];
 
-    memset(incomingData, 0, sizeof(incomingData));
+        memset(incomingData, 0, sizeof(incomingData));
 
-    recv(sockt, incomingData, sizeof(incomingData), 0);
+        recv(sockt, incomingData, sizeof(incomingData), 0);
 
-    printf("%s", incomingData);
+        printf("%s", incomingData);
+    }
 
     return NULL;
 }
