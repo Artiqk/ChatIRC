@@ -15,16 +15,19 @@
 typedef int SOCKET;
 
 void initConnectionToServer (SOCKET *sock, struct sockaddr_in server);
-void sendUserInputToServer (SOCKET sock, struct sockaddr_in server, int maxDataLength);
+int sendUserInputToServer (SOCKET sock, struct sockaddr_in server, int maxDataLength);
 void handleError(char *message);
 
 int main () {
     SOCKET sock;
     struct sockaddr_in server;
+    int connected = 1;
 
     initConnectionToServer(&sock, server);
 
-    sendUserInputToServer(sock, server, MESSAGE_LENGTH);
+    while (connected) {
+        connected = sendUserInputToServer(sock, server, MESSAGE_LENGTH);
+    }
 
     close(sock);
 
@@ -45,14 +48,22 @@ void initConnectionToServer (SOCKET *sock, struct sockaddr_in server) {
 }
 
 
-void sendUserInputToServer (SOCKET sock, struct sockaddr_in server, int maxDataLength) {
+int sendUserInputToServer (SOCKET sock, struct sockaddr_in server, int maxDataLength) {
     char data[maxDataLength];
 
     printf("> "); fgets(data, maxDataLength, stdin);
 
+    data[strcspn(data, "\n")] = '\0';
+
+    if (strcmp(data, "disconnect") == 0) {
+        return 0;
+    }
+
     int dataLength = strlen(data) + 1;
 
     sendto(sock, data, dataLength, 0, (struct sockaddr*)&server, sizeof(server));
+
+    return 1;
 }
 
 
@@ -60,5 +71,3 @@ void handleError(char *message) {
     printf("%s", message);
     exit(EXIT_FAILURE);
 }
-
-
